@@ -1,0 +1,207 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* ------------------------------------------------------------------
+   Dizajnové tokeny
+   Tmavý základ s modrastým nádychom, elektrická modrá + tyrkys ako akcenty,
+   oranžová/červená výhradne pre riziko a výstrahy.
+------------------------------------------------------------------- */
+@theme {
+  --color-ink-950: #05080c;
+  --color-ink-900: #070b10;
+  --color-ink-850: #0a1017;
+  --color-ink-800: #0d141d;
+  --color-ink-700: #131c27;
+  --color-ink-600: #1b2633;
+  --color-line: rgb(150 185 215 / 0.12);
+  --color-line-strong: rgb(150 185 215 / 0.22);
+
+  --color-fog-50: #eef3f7;
+  --color-fog-100: #dfe7ee;
+  --color-fog-300: #a9b8c6;
+  --color-fog-400: #8a9bab;
+  --color-fog-500: #6c7e90;
+
+  --color-volt: #3aa0ff;
+  --color-volt-soft: #8cc8ff;
+  --color-tide: #2dd4c4;
+  --color-tide-soft: #8ff0e5;
+
+  --color-warn-1: #f2c14e;
+  --color-warn-2: #ff8a3d;
+  --color-warn-3: #ff4d4f;
+
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --animate-drift: drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); }
+}
+
+:root {
+  color-scheme: dark;
+  --nav-h: 64px;
+}
+
+html {
+  background: var(--color-ink-900);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-h) + 12px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-ink-900);
+  color: var(--color-fog-100);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+::selection { background: rgb(58 160 255 / 0.35); color: #fff; }
+
+/* Jemný filmový grain — statický SVG šum, žiadna animácia */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.font-display { font-stretch: 72%; letter-spacing: -0.01em; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-fog-400);
+}
+
+.hairline { border-color: var(--color-line); }
+
+/* Zameranie klávesnicou */
+:focus-visible {
+  outline: 2px solid var(--color-volt);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.skip-link {
+  position: absolute; left: 12px; top: -60px; z-index: 100;
+  background: var(--color-volt); color: #00101f; padding: 8px 14px; border-radius: 8px; font-weight: 600;
+}
+.skip-link:focus { top: 12px; }
+
+/* Textové bloky — editoriálna sadzba */
+.prose-ed p { margin: 0 0 1.05em; color: var(--color-fog-300); }
+.prose-ed p strong { color: var(--color-fog-50); font-weight: 600; }
+.prose-ed a { color: var(--color-volt-soft); text-decoration: underline; text-decoration-color: rgb(140 200 255 / 0.35); text-underline-offset: 3px; }
+.prose-ed a:hover { text-decoration-color: currentColor; }
+
+/* Citačné značky */
+.cite {
+  font-family: var(--font-mono);
+  font-size: 0.68em;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 1px;
+  color: var(--color-volt-soft);
+  text-decoration: none;
+  padding: 0 1px;
+}
+.cite:hover { color: #fff; }
+
+/* Panel s jemným okrajom */
+.panel {
+  background: linear-gradient(180deg, rgb(19 28 39 / 0.72), rgb(13 20 29 / 0.72));
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--color-line-strong); color: var(--color-fog-300);
+}
+
+/* Leaflet — tmavá integrácia */
+.leaflet-container { background: #0a0f15; font-family: var(--font-sans); outline: none; }
+.leaflet-control-attribution {
+  background: rgb(7 11 16 / 0.82) !important; color: var(--color-fog-400) !important; font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: var(--color-volt-soft) !important; }
+.leaflet-bar a { background: #0d141d !important; color: var(--color-fog-100) !important; border-color: var(--color-line-strong) !important; }
+.leaflet-bar a:hover { background: #1b2633 !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: #0d141d; color: var(--color-fog-100); border: 1px solid var(--color-line-strong);
+  box-shadow: 0 20px 50px -10px rgb(0 0 0 / 0.7);
+}
+.leaflet-popup-content-wrapper { border-radius: 14px; }
+.leaflet-popup-content { margin: 14px 16px; font-size: 13px; line-height: 1.5; }
+.leaflet-popup-content a { color: var(--color-volt-soft); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--color-fog-400); }
+.leaflet-tooltip {
+  background: #0d141d; color: var(--color-fog-100); border: 1px solid var(--color-line-strong);
+  font-family: var(--font-mono); font-size: 11px; box-shadow: none;
+}
+.leaflet-tooltip-top:before { border-top-color: var(--color-line-strong); }
+
+.map-dark .leaflet-tile-pane { filter: invert(1) hue-rotate(195deg) brightness(0.92) contrast(0.88) saturate(0.35); }
+
+/* Mapa — slovenské popisky */
+.map-label span {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
+  font-family: var(--font-sans); font-size: 11px; font-weight: 500; letter-spacing: .02em;
+  color: rgb(214 224 233 / .78); text-shadow: 0 0 3px #111, 0 0 6px #111;
+}
+.map-label.lbl-t1 span { font-size: 12.5px; font-weight: 600; color: rgb(238 243 247 / .9); }
+.map-label.lbl-t3 span { font-size: 10.5px; color: rgb(169 184 198 / .75); }
+.map-label.lbl-river span { font-family: var(--font-serif); font-style: italic; font-size: 15px; color: rgb(140 200 255 / .75); letter-spacing: .08em; }
+.z-lt-85 .lbl-t2, .z-lt-10 .lbl-t3 { display: none; }
+
+/* Mapa — fotoaparát a tlačidlá fotiek */
+.map-cam {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 999px;
+  background: #eef3f7; color: #070b10; font: 600 11px var(--font-mono);
+  box-shadow: 0 6px 18px -4px rgb(0 0 0 / .7), 0 0 0 3px rgb(58 160 255 / .35);
+  transition: transform .15s;
+}
+.map-cam:hover { transform: scale(1.1); background: var(--color-volt-soft); }
+.map-photo-btn {
+  margin-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+  padding: 8px; border-radius: 10px; border: 1px solid rgb(58 160 255 / .45); background: rgb(58 160 255 / .1);
+  color: #8cc8ff; font-size: 12px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.map-photo-btn:hover { background: rgb(58 160 255 / .2); color: #fff; }
+.map-photo-link { margin-top: 4px; color: #8cc8ff; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none; border: 0; padding: 0; font-size: 11px; text-align: left; }
+
+/* Recharts — tmavé osi */
+.recharts-cartesian-axis-tick-value { fill: var(--color-fog-400); font-family: var(--font-mono); font-size: 11px; }
+.recharts-cartesian-grid line { stroke: rgb(150 185 215 / 0.08); }
+.recharts-surface:focus, .recharts-wrapper:focus, .recharts-sector:focus { outline: none; }
+
+/* Skryť scrollbar pri horizontálnych pásoch */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
